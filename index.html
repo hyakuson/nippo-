@@ -1,0 +1,202 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta http-equiv="X-UA-TextLayoutMetrics" content="gdi">
+    <meta charset="UTF-8">
+    <link rel="StyleSheet" type="text/css" href="lib/jquery-ui.min.css">
+    <link rel="StyleSheet" type="text/css" href="lib/jquery-ui.theme.min.css">
+    <script src="lib/head.min.js"></script>
+    <script src="lib/jquery.min.js"></script>
+    <script src="lib/jquery-ui.min.js" defer></script>
+    <title>勤務時間数計算処理</title>
+</head>
+
+<body id="body">
+
+            <h1>勤務時間数計算処理</h1>
+            
+            <!-- ここから -->
+            <h2>入力項目</h2>
+            <div>
+                <span>勤務時間</span>
+                <input type="text" id="workTimeFromHour">時
+                <input type="text" id="workTimeFromMinute">分 ～
+                <input type="text" id="workTimeToHour">時
+                <input type="text" id="workTimeToMinute">分
+
+            </div>
+            <div>
+                <span>休憩時間</span>
+                <input type="text" id="restTimeFromHour">時
+                <input type="text" id="restTimeFromMinute">分 ～
+                <input type="text" id="restTimeToHour">時
+                <input type="text" id="restTimeToMinute">分
+            </div>
+            <div>
+                <button id="calc_button">勤務時間計算</button>
+            </div>
+
+            <h2>計算結果</h2>
+            <div>
+                <span>勤務時間数　</span><span id="workTime">0時間0分</span>
+            </div>
+            <div>
+                <span>休憩時間数　</span><span id="restTime">0時間0分</span>
+            </div>
+            <div>
+                <span>残業時間数　</span><span id="overWorkTime">0時間0分</span>
+            </div>
+
+            <script>
+                // HTML(DOM)読み込み終了時に実行する処理
+                $(document).on('ready', function() {
+
+                    // 引数の数値が0~23であることを確認する関数(valueは数値であることを前提とする)
+                    var isHour = function(value) {
+                        if (0 <= value && value < 24) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    };
+                    // 引数の数値が0~59であることを確認する関数(valueは数値であることを前提とする)
+                    var isMinute = function(value) {
+                        if (0 <= value && value < 60) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    };
+
+
+                    // 勤務時間計算ボタンが押されたらここの中の処理が実行される
+                    $('#calc_button').on('click', function() {
+
+                        // 勤務時間開始時の入力内容を取得する
+                        var workFromHH = $('#workTimeFromHour').val(),
+                            workFromMI = $('#workTimeFromMinute').val(),
+                            workToHH = $('#workTimeToHour').val(),
+                            workToMI = $('#workTimeToMinute').val(),
+                            restFromHH = $('#restTimeFromHour').val(),
+                            restFromMI = $('#restTimeFromMinute').val(),
+                            restToHH = $('#restTimeToHour').val(),
+                            restToMI = $('#restTimeToMinute').val();
+
+                        /* エラーチェックここから */
+
+                        // 勤務時間の必須チェック
+                        if (!workFromHH || !workFromMI || !workToHH || !workToMI) {
+                            alert('勤務時間を正しい形式で入力してください。');
+                            return;
+                        }
+
+                        // 勤務時間の形式チェック
+                        if (!isFinite(workFromHH) || !isFinite(workFromMI) || !isFinite(workToHH) || !isFinite(workToMI)) {
+                            alert('勤務時間を正しい形式で入力してください。');
+                            return;
+                        }
+
+                        // 勤務時間の範囲チェック
+                        if (!isHour(workFromHH) || !isMinute(workFromMI) || !isHour(workToHH) || !isMinute(workToMI)) {
+                            alert('勤務時間を正しい形式で入力してください。');
+                            return;
+                        }
+
+                        //　休憩時間のいずれかが入力されていたら
+                        if (restFromHH || restFromMI || restToHH || restToMI) {
+                            // 休憩時間のいずれかが未入力
+                            if (!restFromHH || !restFromMI || !restToHH || !restToMI) {
+                                alert('休憩時間を正しい形式で入力してください。');
+                                return;
+                            }
+                            // 休憩時間の形式チェック
+                            if (!isFinite(restFromHH) || !isFinite(restFromMI) || !isFinite(restToHH) || !isFinite(restToMI)) {
+                                alert('休憩時間を正しい形式で入力してください。');
+                                return;
+                            }
+                            // 休憩時間の範囲チェック
+                            if (!isHour(restFromHH) || !isMinute(restFromMI) || !isHour(restToHH) || !isMinute(restToMI)) {
+                                alert('休憩時間を正しい形式で入力してください。');
+                                return;
+                            }
+                        }
+
+
+                        // 組み合わせチェック(勤務時間の前後)
+                        var workTimeFrom = parseInt(workFromHH,10) * 60 + parseInt(workFromMI,10),
+                            workTimeTo = parseInt(workToHH,10) * 60 + parseInt(workToMI,10);
+                        
+                        //console.log(workFromHH, workFromMI, workToHH, workToMI, workTimeFrom, workTimeTo);
+
+                        if (workTimeFrom > workTimeTo) {
+                            alert('勤務開始時間は終了時間以前の時間を入力してください。');
+                            return;
+                        }
+
+                        // 組み合わせチェック(休憩時間の前後)
+                        var restTimeFrom = 0,
+                            restTimeTo = 0;
+                        // 休憩時間が入力されている場合のみ行う
+                        if (restFromHH || restFromMI || restToHH || restToMI) {
+                            restTimeFrom = parseInt(restFromHH,10) * 60 + parseInt(restFromMI,10);
+                            restTimeTo = parseInt(restToHH,10) * 60 + parseInt(restToMI,10);
+                            if (restTimeFrom > restTimeTo) {
+                                alert('休憩開始時間は終了時間以前の時間を入力してください。');
+                                return;
+                            }
+                        }
+
+                        // 組み合わせチェック(休憩時間が勤務時間内にあるか)
+                        // 休憩時間が入力されている場合のみ行う
+                        if (restFromHH || restFromMI || restToHH || restToMI) {
+                            if (restTimeFrom < workTimeFrom) {
+                                alert('休憩時間は勤務時間内で入力してください。');
+                                return;
+                            }
+                            if (workTimeTo < restTimeTo) {
+                                alert('休憩時間は勤務時間内で入力してください。');
+                                return;
+                            }
+                        }
+
+                        /* 計算処理ここから */
+                        
+                        var
+                        // 勤務時間数(分単位)
+                            workTime = workTimeTo - workTimeFrom - (restTimeTo - restTimeFrom),
+                            // 勤務時間数(時)
+                            resultWorkTimeHH = Math.floor(workTime / 60),
+                            // 勤務時間数(分)
+                            resultWorkTimeMI = workTime % 60,
+
+                            // 休憩時間数(分単位)
+                            restTime = restTimeTo - restTimeFrom,
+                            // 休憩時間数(時)
+                            resultRestTimeHH = Math.floor(restTime / 60),
+                            // 休憩時間数(分)
+                            resultRestTimeMI = restTime % 60,
+
+                            // 残業時間(分単位)
+                            overWorkTime = workTimeTo - (17 * 60 + 0),
+                            // 残業時間数(時)(Math.floorだと負数になったとき切り下がるため余りを引いて割り切れるようにする)
+                            resultOverWorkTimeHH = (overWorkTime - overWorkTime % 60 ) / 60,
+                            // 残業時間数(分)
+                            resultOverWorkTimeMI = overWorkTime % 60;
+                        
+                        //console.log(workTimeTo, overWorkTime);
+                        
+                        // 結果を表示する
+                        $('#workTime').text(resultWorkTimeHH + '時間' + resultWorkTimeMI + '分');
+                        $('#restTime').text(resultRestTimeHH + '時間' + resultRestTimeMI + '分');
+                        $('#overWorkTime').text(resultOverWorkTimeHH + '時間' + resultOverWorkTimeMI + '分');
+                    });
+                });
+
+            </script>
+
+            <!-- ここまで -->
+</body>
+
+</html>
